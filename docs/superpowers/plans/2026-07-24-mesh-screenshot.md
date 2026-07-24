@@ -728,7 +728,7 @@ def _tiles(n, size=(64, 64)):
 def test_grid_dims():
     assert grid_dims(7) == (3, 3)    # 6 views + stats
     assert grid_dims(15) == (4, 4)   # 14 views + stats
-    assert grid_dims(27) == (6, 5)   # 26 views + stats
+    assert grid_dims(27) == (5, 6)   # 26 views + stats
 
 
 def test_compose_size_for_14_views():
