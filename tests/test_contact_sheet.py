@@ -7,7 +7,7 @@ from mesh_screenshot.contact_sheet import compose_contact_sheet, grid_dims
 def _stats():
     return MeshStats(
         n_vertices=8, n_faces=12, is_watertight=True,
-        n_boundary_edges=0, n_boundary_loops=0,
+        n_boundary_edges=0, n_boundary_components=0,
         bbox_dims=(1.0, 2.0, 3.0), centroid=np.zeros(3),
         radius=1.87, has_color=False,
     )

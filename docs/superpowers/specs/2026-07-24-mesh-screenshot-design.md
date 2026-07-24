@@ -88,8 +88,13 @@ absolute scale (critical for a generic tool that does not know mesh units).
   default.**
 - **Background:** `--background` (default white).
 - **Stats panel** rendered onto the sheet: filename, #vertices, #faces,
-  watertight yes/no, #boundary loops, bbox dimensions. Cheap metadata that helps
-  the model reason, not just look.
+  watertight yes/no, #boundary edges, #boundary components, bbox dimensions,
+  whether color data is present. Cheap metadata that helps the model reason,
+  not just look.
+  - *Boundary components*, not "loops": the count is the number of connected
+    components of the boundary-edge graph. That equals the hole count for a
+    manifold boundary, but two openings meeting at a single non-manifold
+    vertex form one component, so the label stays honest about what is measured.
 
 ## 6. Contact sheet layout
 

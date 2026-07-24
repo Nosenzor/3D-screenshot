@@ -13,14 +13,22 @@ from .errors import MeshScreenshotError
 from .renderer import RenderOptions, render_views
 
 
+MIN_TILE = 32
+
+
 def parse_resolution(text: str) -> tuple[int, int]:
     try:
-        w, h = text.lower().split("x")
-        return int(w), int(h)
+        w_text, h_text = text.lower().split("x")
+        w, h = int(w_text), int(h_text)
     except Exception as exc:  # noqa: BLE001
         raise argparse.ArgumentTypeError(
             f"resolution must look like WxH (e.g. 512x512), got '{text}'"
         ) from exc
+    if w < MIN_TILE or h < MIN_TILE:
+        raise argparse.ArgumentTypeError(
+            f"resolution must be at least {MIN_TILE}x{MIN_TILE}, got '{text}'"
+        )
+    return w, h
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -50,7 +58,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def _process_one(path: Path, args: argparse.Namespace, out_dir: Path) -> None:
+def _process_one(path: Path, args: argparse.Namespace, out_dir: Path,
+                 out_stem: str) -> None:
     loaded = loader.load_mesh(path)
     mesh = loaded.mesh
     edges = analysis.boundary_edges(mesh)
@@ -69,15 +78,14 @@ def _process_one(path: Path, args: argparse.Namespace, out_dir: Path) -> None:
     tiles = render_views(mesh, cams, options, edges)
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    stem = path.stem
     sheet = contact_sheet.compose_contact_sheet(
         tiles, stats, path.name, tile_size=args.resolution,
         background=args.background,
     )
-    sheet.save(out_dir / f"{stem}_contact.png")
+    sheet.save(out_dir / f"{out_stem}_contact.png")
 
     if args.individual:
-        view_dir = out_dir / f"{stem}_views"
+        view_dir = out_dir / f"{out_stem}_views"
         view_dir.mkdir(parents=True, exist_ok=True)
         for idx, (label, arr) in enumerate(tiles):
             Image.fromarray(arr).save(view_dir / f"{idx:02d}_{label}.png")
@@ -85,8 +93,20 @@ def _process_one(path: Path, args: argparse.Namespace, out_dir: Path) -> None:
 
 def run(args: argparse.Namespace) -> int:
     out_dir = Path(args.out)
+    seen: dict[str, int] = {}
     for raw in args.inputs:
-        _process_one(Path(raw), args, out_dir)
+        path = Path(raw)
+        stem = path.stem
+        count = seen.get(stem, 0)
+        seen[stem] = count + 1
+        out_stem = stem if count == 0 else f"{stem}_{count + 1}"
+        if count:
+            print(
+                f"warning: several inputs share the name '{stem}'; writing "
+                f"'{out_stem}_contact.png' so earlier output is not overwritten",
+                file=sys.stderr,
+            )
+        _process_one(path, args, out_dir, out_stem)
     return 0
 
 
@@ -96,6 +116,10 @@ def main(argv: list[str] | None = None) -> int:
         return run(args)
     except MeshScreenshotError as exc:
         print(f"error: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:  # noqa: BLE001 - never surface a raw traceback
+        print(f"error: unexpected failure ({type(exc).__name__}): {exc}",
+              file=sys.stderr)
         return 1
 
 

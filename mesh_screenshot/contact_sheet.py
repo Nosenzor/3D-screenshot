@@ -28,7 +28,7 @@ def _stats_lines(stats: MeshStats, source_name: str) -> list[str]:
         f"faces: {stats.n_faces}",
         f"watertight: {'yes' if stats.is_watertight else 'no'}",
         f"boundary edges: {stats.n_boundary_edges}",
-        f"boundary loops: {stats.n_boundary_loops}",
+        f"boundary components: {stats.n_boundary_components}",
         f"bbox: {dims[0]:.2f} x {dims[1]:.2f} x {dims[2]:.2f}",
         f"color data: {'yes' if stats.has_color else 'no'}",
     ]
@@ -46,14 +46,20 @@ def _panel(size: tuple[int, int], stats: MeshStats, source_name: str,
     return img
 
 
+def _caption_height(tile_h: int) -> int:
+    """Caption bar height, shrunk so a very short tile still leaves 1px of view."""
+    return max(1, min(_CAPTION_H, tile_h - 1))
+
+
 def _tile(label: str, arr: np.ndarray, size: tuple[int, int],
           background: str) -> Image.Image:
     img = Image.new("RGB", size, background)
+    cap_h = _caption_height(size[1])
     view = Image.fromarray(np.asarray(arr, dtype=np.uint8)[:, :, :3])
-    view = view.resize((size[0], size[1] - _CAPTION_H))
-    img.paste(view, (0, _CAPTION_H))
+    view = view.resize((max(1, size[0]), max(1, size[1] - cap_h)))
+    img.paste(view, (0, cap_h))
     draw = ImageDraw.Draw(img)
-    draw.rectangle([0, 0, size[0], _CAPTION_H], fill="black")
+    draw.rectangle([0, 0, size[0], cap_h], fill="black")
     draw.text((4, 3), label, fill="white", font=_FONT)
     return img
 

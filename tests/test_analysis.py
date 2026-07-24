@@ -5,7 +5,7 @@ from mesh_screenshot.analysis import (
     MeshStats,
     boundary_edges,
     compute_stats,
-    count_boundary_loops,
+    count_boundary_components,
     mesh_has_color,
 )
 
@@ -32,14 +32,14 @@ def test_triangle_boundary_edges_and_loop():
     tri = _triangle()
     be = boundary_edges(tri)
     assert len(be) == 3
-    assert count_boundary_loops(be) == 1
+    assert count_boundary_components(be) == 1
 
 
 def test_square_shares_diagonal():
     sq = _square()
     be = boundary_edges(sq)
     assert len(be) == 4  # 4 perimeter edges; shared diagonal excluded
-    assert count_boundary_loops(be) == 1
+    assert count_boundary_components(be) == 1
 
 
 def test_has_color_detection():
@@ -57,6 +57,6 @@ def test_compute_stats_fields():
     assert stats.n_faces == len(box.faces)
     assert stats.is_watertight is True
     assert stats.n_boundary_edges == 0
-    assert stats.n_boundary_loops == 0
+    assert stats.n_boundary_components == 0
     np.testing.assert_allclose(sorted(stats.bbox_dims), [2, 4, 6])
     assert stats.radius > 0

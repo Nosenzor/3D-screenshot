@@ -24,9 +24,10 @@ the PNG to reason about the geometry.
    ```
 
 2. `Read` the produced contact sheet: `<OUTPUT_DIR>/<stem>_contact.png`.
-   It shows a stats panel (vertices, faces, watertight, boundary loops, bbox)
-   plus 14 labeled camera views. Boundary/open edges are highlighted in red by
-   default — zero highlighted edges means the surface is closed.
+   It shows a stats panel (vertices, faces, watertight, boundary edges,
+   boundary components, bbox) plus 14 labeled camera views. Boundary/open edges
+   are highlighted in red by default — zero highlighted edges means the surface
+   is closed.
 
 ## Useful flags
 
