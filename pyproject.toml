@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mesh-screenshot"
+version = "0.1.0"
+description = "Render any mesh to a labeled multi-view contact-sheet PNG so AI agents can see 3D geometry."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "trimesh>=4.0",
+    "pyvista>=0.43",
+    "numpy>=1.24",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
+[project.scripts]
+mesh-screenshot = "mesh_screenshot.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["mesh_screenshot*"]
