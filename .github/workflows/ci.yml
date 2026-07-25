@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Portability sweep. Offscreen GL is attempted everywhere, but a missing
+  # backend only skips the render tests here; the strict job below is what
+  # guarantees rendering is genuinely exercised.
+  test:
+    name: test ${{ matrix.os }} py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.10" }
+          - { os: ubuntu-latest, python: "3.11" }
+          - { os: ubuntu-latest, python: "3.12" }
+          - { os: ubuntu-latest, python: "3.13" }
+          - { os: windows-latest, python: "3.11" }
+          - { os: windows-latest, python: "3.13" }
+          - { os: macos-latest, python: "3.11" }
+          - { os: macos-latest, python: "3.13" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      # xvfb on Linux, Mesa software GL on Windows/macOS, so VTK can render
+      # offscreen on runners with no GPU and no display.
+      - name: Set up headless display
+        uses: pyvista/setup-headless-display-action@v4
+
+      - name: Install package and test deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Show resolved dependency versions
+        run: >-
+          python -c "import sys, numpy, trimesh, pyvista, PIL;
+          print('python ', sys.version.split()[0]);
+          print('numpy  ', numpy.__version__);
+          print('trimesh', trimesh.__version__);
+          print('pyvista', pyvista.__version__);
+          print('pillow ', PIL.__version__)"
+
+      - name: Report offscreen GL availability
+        run: >-
+          python -c "from tests.conftest import _probe_gl;
+          ok, why = _probe_gl();
+          print('offscreen GL available:', ok);
+          print('reason:', why or 'n/a')"
+
+      - name: Run tests
+        run: python -m pytest tests/ -v -rs --durations=10
+
+  # Strict gate: rendering MUST work, and nothing may be skipped. Stops a
+  # blank-render or stale-frame regression from hiding behind a skip.
+  render-strict:
+    name: render required (no skips)
+    runs-on: ubuntu-latest
+    env:
+      MESH_SCREENSHOT_REQUIRE_GL: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: pyvista/setup-headless-display-action@v4
+
+      - name: Install package and test deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run full suite, requiring GL and forbidding skips
+        run: |
+          set -o pipefail
+          python -m pytest tests/ -v -rs | tee pytest.log
+          if grep -qiE '[0-9]+ skipped' pytest.log; then
+            echo "::error::Tests were skipped while offscreen GL was required"
+            exit 1
+          fi
+          echo "No skips - the render path was exercised."
+
+  # Validates INSTALL.md end to end: build a wheel, install it into a clean
+  # venv, and render with the documented command.
+  packaging:
+    name: build wheel and smoke-render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: pyvista/setup-headless-display-action@v4
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+          ls -l dist/
+
+      - name: Install the built wheel into a clean venv
+        run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/python -m pip install --upgrade pip
+          /tmp/venv/bin/python -m pip install dist/*.whl
+
+      - name: Render with the installed console script
+        run: |
+          /tmp/venv/bin/python -c "import trimesh; trimesh.creation.icosphere(subdivisions=2, radius=5.0).export('smoke.ply')"
+          /tmp/venv/bin/mesh-screenshot smoke.ply -o shots --views 6 --resolution 128x128
+
+      - name: Verify the sheet exists, is the right size, and is not blank
+        run: >-
+          /tmp/venv/bin/python scripts/check_contact_sheet.py
+          shots/smoke_contact.png --expect-size 384x384
+
+      - name: Upload the rendered sheet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-contact-sheet
+          path: shots/smoke_contact.png
+          if-no-files-found: warn

@@ -1,5 +1,8 @@
 # mesh-screenshot
 
+[![CI](https://github.com/Nosenzor/3D-screenshot/actions/workflows/ci.yml/badge.svg)](https://github.com/Nosenzor/3D-screenshot/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+
 Render any 3D mesh to a single labeled **contact-sheet PNG** (14 camera views +
 a stats panel) so both humans and AI coding agents can quickly *see* geometry:
 holes, open boundaries, colors, and whether an operation produced something sane.
@@ -10,7 +13,16 @@ holes, open boundaries, colors, and whether an operation produced something sane
 pip install -e .
 ```
 
-Dependencies: `trimesh`, `pyvista`, `numpy`, `pillow`.
+Or without cloning:
+
+```bash
+pip install "git+https://github.com/Nosenzor/3D-screenshot.git"
+```
+
+Dependencies: `trimesh`, `pyvista`, `numpy`, `pillow`. Python 3.10+.
+
+See **[INSTALL.md](INSTALL.md)** for virtualenvs, wheels, Docker, headless
+Linux setup, installing the Claude Code skill globally, and troubleshooting.
 
 ## Usage
 
@@ -50,3 +62,15 @@ xvfb-run python -m mesh_screenshot model.ply -o shots/
 pip install -e ".[test]"
 python -m pytest -v
 ```
+
+Render tests skip silently when no GL backend is present, so set
+`MESH_SCREENSHOT_REQUIRE_GL=1` to turn a missing backend into a failure:
+
+```bash
+MESH_SCREENSHOT_REQUIRE_GL=1 python -m pytest tests/ -v -rs
+```
+
+CI runs the suite on Linux, Windows, and macOS across Python 3.10–3.13, plus a
+strict Linux job where rendering is required and no test may skip, and a
+packaging job that installs the built wheel into a clean venv and renders with
+the documented command.
