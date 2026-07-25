@@ -12,7 +12,7 @@
 
 - **Python:** `requires-python = ">=3.10"` (uses `X | Y` type syntax).
 - **Runtime dependencies (exact list):** `trimesh`, `pyvista`, `numpy`, `pillow`. No others.
-- **No domain coupling:** generic mesh tool only. No dental/jaw/segmentation-specific naming, presets, or flags anywhere.
+- **No domain coupling:** generic mesh tool only. No domain-specific naming, presets, or flags anywhere.
 - **Boundary highlight ON by default;** wireframe OFF by default; contact sheet is the default (only) output unless `--individual`.
 - **GL isolation:** only `renderer.py` imports/uses `pyvista`. All other modules import cleanly with no display.
 - **Friendly failure:** on a failed GL/offscreen context, print a one-line actionable hint (OSMesa / `xvfb-run`), not a raw traceback; exit non-zero.
